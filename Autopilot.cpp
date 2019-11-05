@@ -25,6 +25,28 @@ void pitch_controller::begin(float setpoint_,
                              float roll_comp_,
                              float sampleRate_)
 {
+	update(setpoint_,
+	       maxRate_up_,
+	       maxRate_down_,
+	       kp_,
+	       ki_,
+	       kd_,
+	       roll_comp_,
+	       sampleRate_);
+}
+
+
+
+
+void pitch_controller::update(float setpoint_,
+                              int maxRate_up_,
+                              int maxRate_down_,
+                              float kp_,
+                              float ki_,
+                              float kd_,
+                              float roll_comp_,
+                              float sampleRate_)
+{
 	setpoint        = float_constrian(setpoint_, MIN_SETPOINT, MAX_SETPOINT);
 	maxRate_up      = float_constrian(maxRate_up_, MIN_RATE_UP, MAX_RATE_UP);
 	maxRate_down    = float_constrian(maxRate_down_, MIN_RATE_DN, MAX_RATE_DN);
@@ -48,10 +70,8 @@ float pitch_controller::compute(float pitchAngle, // Degrees
 {
 	float limited_err;
 	float roll_bias;
-	float biased_err;
 	float pitch_rate; // Degrees per Sec
 	float rate_adj;
-	float scaler_output;
 	float controller_output;
 
 	sampleTimer_current = millis();
@@ -62,19 +82,20 @@ float pitch_controller::compute(float pitchAngle, // Degrees
 		sampleTimer_previous += samplePeriod_ms;
 		
 		previousError = error;
-		error = setpoint - pitchAngle;
-		summedError += (error - previousError) / 2) * (sample_time_actual / 1000); /////////////////////////// <<<<<<<<<<<<<------------
+		error         = setpoint - pitchAngle;
 
-		limited_err = float_constrian(error * omega(), maxRate_down, maxRate_up);
-		roll_bias   = roll_compensation(rollAngle, airspeed);
-		biased_err  = limited_err + roll_bias;
-		pitch_rate  = (pitchAngle - prevPitchAngle) * (sample_time_actual / 1000); // Degrees per Sec
-		rate_adj    = biased_err + pitch_rate;
-		scaler_output = airspeed_scaler * rate_adj;
+		limited_err     = float_constrian(error * omega(), maxRate_down, maxRate_up);
+		roll_bias       = roll_compensation(rollAngle, airspeed);
+		biasedError     = limited_err + roll_bias;
+		pitch_rate      = (pitchAngle - prevPitchAngle) * (sample_time_actual / 1000); // Degrees per Sec
+		rate_adj        = biasedError + pitch_rate;
+		airspeed_scaler = find_as_scaler(airspeed);
+		previous_scaler = scaler_output;
+		scaler_output   = airspeed_scaler * rate_adj;
 
-		p_val = p_component(biased_err);
-		i_val = i_component(scaler_output);
-		d_val = d_component(scaler_output);
+		p_val = p_component();
+		i_val = i_component();
+		d_val = d_component();
 		
 		controller_output = (p_val + i_val + d_val) * airspeed_scaler;
 
@@ -126,23 +147,40 @@ float pitch_controller::roll_compensation(float rollAngle, float airspeed)
 
 
 
-float pitch_controller::p_component(float input)
+float pitch_controller::find_as_scaler(float airspeed)
 {
-	return kp * error;
+	if (airspeed >= AIRSPEED_THRESHOLD)
+		return 1 / airspeed;
+	else
+		return 2;
 }
 
 
 
 
-float pitch_controller::i_component(float input)
+float pitch_controller::p_component()
 {
+	return kp * biasedError;
+}
+
+
+
+
+float pitch_controller::i_component()
+{
+	summedError += ((error - previousError) / 2) * (sample_time_actual / 1000);
+	summedError  = float_constrian(summedError, -i_limit, i_limit);
+
 	return ki * summedError;
 }
 
 
 
 
-float pitch_controller::d_component(float input)
+float pitch_controller::d_component()
 {
+	previous_scaler
+	scaler_output
+	
 	return kd;
 }

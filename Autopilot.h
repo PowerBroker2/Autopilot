@@ -1,10 +1,16 @@
+/*
+ * Output of all controllers are assumed to be in centi-degrees.
+ * This output is automatically converted into us pulses for servo control.
+ */
+
 #pragma once
 #include "Arduino.h"
 
 
 
 
-const float GRAVITY = 9.80665;
+const float GRAVITY            = 9.80665; // m/s2
+const float AIRSPEED_THRESHOLD = 0.0001;  // m/s
 
 
 
@@ -30,6 +36,15 @@ public:
 	           float kd_,           // Unitless
 	           float roll_comp_,    // Unitless
 	           float sampleRate_);  // Hz
+
+	void update(float setpoint_,     // Degrees
+	            int maxRate_up_,     // Degrees per Sec
+	            int maxRate_down_,   // Degrees per Sec
+	            float kp_,           // Unitless
+	            float ki_,           // Unitless
+	            float kd_,           // Unitless
+	            float roll_comp_,    // Unitless
+	            float sampleRate_);  // Hz
 
 	float compute(float pitchAngle, // Degrees
 	              float rollAngle,  // Degrees
@@ -84,7 +99,9 @@ private:
 	float ki;
 	float kd;
 	float roll_comp;
-	int airspeed_scaler = 1;
+	float scaler_output   = 0;
+	float previous_scaler = 0;
+	int airspeed_scaler   = 1;
 
 	float p_val;
 	float i_val;
@@ -92,10 +109,11 @@ private:
 
 	int maxRate_up;
 	int maxRate_down;
-	float i_limit       = 1500; // Centi-Degrees
+	int i_limit         = 1500; // Centi-Degrees
 	float error         = 0;
 	float previousError = 0;
 	float summedError   = 0;
+	float biasedError   = 0;
 
 	float prevPitchAngle = 0;
 
@@ -109,7 +127,8 @@ private:
 	float find_ki(float ki_, float samplePeriod_s);
 	float omega();
 	float roll_compensation(float rollAngle, float airspeed);
-	float p_component(float input);
-	float i_component(float input);
-	float d_component(float input);
+	float find_as_scaler(float airspeed);
+	float p_component();
+	float i_component();
+	float d_component();
 };
