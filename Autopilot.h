@@ -15,7 +15,9 @@ const float AIRSPEED_THRESHOLD = 0.0001;  // m/s
 
 
 
-float float_constrian(float input, float min, float max);
+float float_constrain(float input, float min, float max);
+float float_map(float x, float in_min, float in_max, float out_min, float out_max);
+int centiDeg_to_us(int controller_output_, int servoMin_, int servoMax_);
 
 
 
@@ -35,7 +37,9 @@ public:
 	           float ki_,           // Unitless
 	           float kd_,           // Unitless
 	           float roll_comp_,    // Unitless
-	           float sampleRate_);  // Hz
+	           float sampleRate_,   // Hz
+	           int servoMax_,       // ms pulswidth
+	           int servoMin_);      // ms pulswidth
 
 	void update(float setpoint_,     // Degrees
 	            int maxRate_up_,     // Degrees per Sec
@@ -44,7 +48,9 @@ public:
 	            float ki_,           // Unitless
 	            float kd_,           // Unitless
 	            float roll_comp_,    // Unitless
-	            float sampleRate_);  // Hz
+	            float sampleRate_,   // Hz
+	            int servoMax_,       // ms pulswidth
+	            int servoMin_);      // ms pulswidth
 
 	float compute(float pitchAngle, // Degrees
 	              float rollAngle,  // Degrees
@@ -85,12 +91,15 @@ private:
 	const int MAX_I_LIMIT = 4500;
 	const int MIN_I_LIMIT = 0;
 
+	const int MAX_SERVO = 2000;
+	const int MIN_SERVO = 1000;
 
 
 
-	unsigned long sampleTimer_previous;
-	unsigned long sampleTimer_current;
-	unsigned long sample_time_actual;
+
+	unsigned long sampleTimer_previous = millis();
+	unsigned long sampleTimer_current  = millis();
+	unsigned long sample_time_actual   = millis();
 
 	unsigned int samplePeriod_ms;
 	float samplePeriod_s;
@@ -102,6 +111,9 @@ private:
 	float scaler_output   = 0;
 	float previous_scaler = 0;
 	int airspeed_scaler   = 1;
+
+	int servoMax;
+	int servoMin;
 
 	float p_val;
 	float i_val;
